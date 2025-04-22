@@ -49,40 +49,46 @@ def note_title_function():
     except Exception as e:
         messagebox.showerror("Error", f"Failed to save note: {e}")
 
-#Decrypt Function
+# Decrypt Function
 def decrypt_note():
     title = entry_note_title.get()
     password = entry_password.get()
 
-    if title == "" or password == "":
+    # Check if title and password are filled
+    if not title or not password:
         messagebox.showwarning("Warning", "Please enter both title and password.")
         return
 
     try:
+        # Read all saved notes from file
         with open("SecretNotes.txt", "r") as file:
-            contents = file.read().split("---\n")
+            notes = file.read().split("---\n")
 
-        found = False
-        for block in contents:
-            if block.strip().startswith(f"Title: {title}"):
-                lines = block.strip().split("\n")
-                encrypted_note = "".join(lines[1:])
-                key = sum(ord(char) for char in password)
-                decrypted_note = decrypt(encrypted_note, key)
-                text_for_note.delete("1.0", END)
-                text_for_note.insert(END, decrypted_note)
-                found = True
-                break
+        # Create a key from password (same as during encryption)
+        key = sum(ord(char) for char in password)
 
-        if not found:
-            messagebox.showerror("Error", "Note not found.")
-        elif decrypted_note.startswith("❌"):
-            messagebox.showerror("Error", "Wrong password or corrupt note.")
-        else:
-            messagebox.showinfo("Success", "Note decrypted!")
+        for note in notes:
+            if note.startswith(f"Title: {title}"):
+                try:
+                    encrypted_part = "\n".join(note.strip().split("\n")[1:])  # skip the title line
+                    decrypted_text = decrypt(encrypted_part, key)
+
+                    if decrypted_text.startswith("❌"):
+                        messagebox.showerror("Error", "Wrong password or corrupted note.")
+                    else:
+                        text_for_note.delete("1.0", END)
+                        text_for_note.insert("1.0", decrypted_text)
+                        messagebox.showinfo("Success", "Note decrypted successfully!")
+                    return
+                except Exception as e:
+                    messagebox.showerror("Error", f"Decryption failed: {e}")
+                    return
+
+        # If loop ends and no note found
+        messagebox.showerror("Error", "Note not found.")
 
     except FileNotFoundError:
-        messagebox.showerror("Error", "SecretNotes.txt not found.")
+        messagebox.showerror("Error", "No saved notes found.")
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {e}")
 
